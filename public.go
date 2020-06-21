@@ -1,6 +1,7 @@
 package discover
 
 import (
+	"bytes"
 	"encoding/xml"
 	"fmt"
 )
@@ -22,6 +23,14 @@ func createUrl(scheme, port, uri, ip string) (res string) {
 		res = fmt.Sprintf("%s://%s:%s/%s", scheme, ip, port, uri)
 	}
 	return
+}
+
+func xmlEscape(s string) string {
+	buf := bytes.NewBufferString("")
+	err := xml.EscapeText(buf, []byte(s))
+	chk(err)
+	//return strings.ReplaceAll(buf.String(), `"`, "&quot;")
+	return buf.String()
 }
 
 //<append scheme=\"%s\" port=\"%d\" uri=\"%s\" title=\"%s\" name=\"%s\" />\n\r

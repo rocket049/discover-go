@@ -71,7 +71,7 @@ func (s *DiscoverServer) ParseMsg(msg []byte, from *net.UDPAddr) {
 
 func (s *DiscoverServer) responseQuery(data []byte, from *net.UDPAddr) {
 	for _, serve := range s.Services {
-		dgam := fmt.Sprintf("<serve href=\"%s\" title=\"%s\"  name=\"%s\" />\n\r", serve.Href, serve.Title, serve.Name)
+		dgam := fmt.Sprintf("<serve href=\"%s\" title=\"%s\"  name=\"%s\" />\n\r", serve.Href, xmlEscape(serve.Title), xmlEscape(serve.Name))
 		//log.Println("resp:", dgam)
 		s.Conn.WriteToUDP([]byte(dgam), from)
 	}

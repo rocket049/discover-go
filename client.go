@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/url"
 	"time"
 )
 
@@ -48,7 +49,7 @@ func (s *DiscoverClient) Query() (res []ServeNode) {
 			break
 		}
 		if n > 0 {
-			//log.Println(string(buf[:n]), from.IP.String())
+			//log.Println(string(buf[:n]))
 			var msg serveData
 			xml.Unmarshal(buf[:n], &msg)
 			res = append(res, ServeNode{Href: msg.Href, Title: msg.Title, Name: msg.Name})
@@ -59,13 +60,9 @@ func (s *DiscoverClient) Query() (res []ServeNode) {
 
 func (s *DiscoverClient) Append(scheme string, port int, uri string, name, title string) bool {
 	var msg string
-	if port > 0 {
-		msg = fmt.Sprintf("<append scheme=\"%s\" port=\"%d\" uri=\"%s\" title=\"%s\" name=\"%s\" />\n\r",
-			scheme, port, uri, title, name)
-	} else {
-		msg = fmt.Sprintf("<append scheme=\"%s\" uri=\"%s\" title=\"%s\" name=\"%s\" />\n\r",
-			scheme, uri, title, name)
-	}
+
+	msg = fmt.Sprintf("<append scheme=\"%s\" port=\"%d\" uri=\"%s\" title=\"%s\" name=\"%s\" />\n\r",
+		scheme, port, url.PathEscape(uri), xmlEscape(title), xmlEscape(name))
 
 	s.Conn.WriteToUDP([]byte(msg), s.RAddr)
 	s.Conn.SetReadDeadline(time.Now().Add(time.Millisecond * 500))
@@ -80,7 +77,7 @@ func (s *DiscoverClient) Append(scheme string, port int, uri string, name, title
 
 func (s *DiscoverClient) Remove(scheme string, port int, uri string) bool {
 	msg := fmt.Sprintf("<remove scheme=\"%s\" port=\"%d\" uri=\"%s\" />\n\r",
-		scheme, port, uri)
+		scheme, port, url.PathEscape(uri))
 	s.Conn.WriteToUDP([]byte(msg), s.RAddr)
 	s.Conn.SetReadDeadline(time.Now().Add(time.Millisecond * 500))
 	var buf [64]byte

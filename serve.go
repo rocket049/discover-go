@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 )
 
 /*
@@ -19,10 +20,15 @@ import (
 type DiscoverServer struct {
 	Conn     *net.UDPConn
 	Services []ServeNode
+	Lock     sync.RWMutex
 }
 
-func newServer(c *net.UDPConn) *DiscoverServer {
+func newServerConn(c *net.UDPConn) *DiscoverServer {
 	return &DiscoverServer{Conn: c, Services: []ServeNode{}}
+}
+
+func NewServer() *DiscoverServer {
+	return &DiscoverServer{}
 }
 
 func Serve() (err error) {
@@ -33,7 +39,7 @@ func Serve() (err error) {
 	chk(err)
 	conn, err := net.ListenMulticastUDP("udp4", nil, addr)
 	chk(err)
-	server := newServer(conn)
+	server := newServerConn(conn)
 
 	buf := make([]byte, 1024)
 	var n int
@@ -70,6 +76,8 @@ func (s *DiscoverServer) ParseMsg(msg []byte, from *net.UDPAddr) {
 }
 
 func (s *DiscoverServer) responseQuery(data []byte, from *net.UDPAddr) {
+	s.Lock.RLock()
+	defer s.Lock.RUnlock()
 	for _, serve := range s.Services {
 		dgam := fmt.Sprintf("<serve href=\"%s\" title=\"%s\"  name=\"%s\" />\n\r", serve.Href, xmlEscape(serve.Title), xmlEscape(serve.Name))
 		//log.Println("resp:", dgam)
@@ -88,13 +96,17 @@ func (s *DiscoverServer) responseAppend(data []byte, from *net.UDPAddr) {
 	for i := range s.Services {
 		if s.Services[i].Href == url {
 			isExist = true
+			s.Lock.Lock()
 			s.Services[i].Name = msg.Name
 			s.Services[i].Title = msg.Title
+			s.Lock.Unlock()
 			break
 		}
 	}
 	if isExist == false {
+		s.Lock.Lock()
 		s.Services = append(s.Services, ServeNode{Href: url, Title: msg.Title, Name: msg.Name})
+		s.Lock.Unlock()
 	}
 
 	//log.Println("response ok")
@@ -107,12 +119,81 @@ func (s *DiscoverServer) responseRemove(data []byte, from *net.UDPAddr) {
 	err := xml.Unmarshal(data, &msg)
 	chk(err)
 	url := createUrl(msg.Scheme, msg.Port, msg.Uri, from.IP.String())
+
+	s.Lock.RLock()
 	services := make([]ServeNode, 0, len(s.Services))
+
 	for i := range s.Services {
 		if s.Services[i].Href != url {
 			services = append(services, s.Services[i])
 		}
 	}
+	s.Lock.RUnlock()
+	s.Lock.Lock()
 	s.Services = services
+	s.Lock.Unlock()
 	s.Conn.WriteToUDP([]byte("<response name=\"ok\" />\n\r"), from)
+}
+
+func (s *DiscoverServer) Append(scheme, ip, port, uri, name, title string) {
+	url := createUrl(scheme, port, uri, ip)
+
+	var isExist bool = false
+
+	for i := range s.Services {
+		if s.Services[i].Href == url {
+			isExist = true
+			s.Lock.Lock()
+			s.Services[i].Name = name
+			s.Services[i].Title = title
+			s.Lock.Unlock()
+			break
+		}
+	}
+	if isExist == false {
+		s.Lock.Lock()
+		s.Services = append(s.Services, ServeNode{Href: url, Title: title, Name: name})
+		s.Lock.Unlock()
+	}
+}
+
+func (s *DiscoverServer) Remove(scheme, ip, port, uri string) {
+	url := createUrl(scheme, port, uri, ip)
+
+	s.Lock.RLock()
+	services := make([]ServeNode, 0, len(s.Services))
+
+	for i := range s.Services {
+		if s.Services[i].Href != url {
+			services = append(services, s.Services[i])
+		}
+	}
+	s.Lock.RUnlock()
+	s.Lock.Lock()
+	s.Services = services
+	s.Lock.Unlock()
+}
+
+func (s *DiscoverServer) Serve() {
+	defer func() {
+		recover()
+	}()
+	addr, err := net.ResolveUDPAddr("udp4", "239.9.0.99:9000")
+	chk(err)
+	conn, err := net.ListenMulticastUDP("udp4", nil, addr)
+	chk(err)
+
+	s.Conn = conn
+	s.Services = []ServeNode{}
+
+	buf := make([]byte, 1024)
+	var n int
+	var from *net.UDPAddr
+	for {
+		n, from, err = conn.ReadFromUDP(buf)
+		chk(err)
+		if n > 0 {
+			s.ParseMsg(buf[:n], from)
+		}
+	}
 }

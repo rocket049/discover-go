@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strconv"
 	"sync"
 )
 
@@ -144,8 +145,8 @@ func (s *DiscoverServer) responseRemove(data []byte, from *net.UDPAddr) {
 	s.Conn.WriteToUDP([]byte("<response name=\"ok\" />\n\r"), from)
 }
 
-func (s *DiscoverServer) Append(scheme, ip, port, uri, name, title string) {
-	url := createUrl(scheme, port, uri, ip)
+func (s *DiscoverServer) Append(scheme, ip string, port int, uri, name, title string) {
+	url := createUrl(scheme, strconv.Itoa(port), uri, ip)
 
 	var isExist bool = false
 
@@ -166,8 +167,8 @@ func (s *DiscoverServer) Append(scheme, ip, port, uri, name, title string) {
 	}
 }
 
-func (s *DiscoverServer) Remove(scheme, ip, port, uri string) {
-	url := createUrl(scheme, port, uri, ip)
+func (s *DiscoverServer) Remove(scheme, ip string, port int, uri string) {
+	url := createUrl(scheme, strconv.Itoa(port), uri, ip)
 
 	s.Lock.RLock()
 	services := make([]ServeNode, 0, len(s.Services))

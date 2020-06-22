@@ -21,6 +21,7 @@ type DiscoverServer struct {
 	Conn     *net.UDPConn
 	Services []ServeNode
 	Lock     sync.RWMutex
+	ReadOnly bool
 }
 
 func newServerConn(c *net.UDPConn) *DiscoverServer {
@@ -28,7 +29,7 @@ func newServerConn(c *net.UDPConn) *DiscoverServer {
 }
 
 func NewServer() *DiscoverServer {
-	return &DiscoverServer{}
+	return &DiscoverServer{Services: []ServeNode{}}
 }
 
 func Serve() (err error) {
@@ -86,6 +87,10 @@ func (s *DiscoverServer) responseQuery(data []byte, from *net.UDPAddr) {
 }
 
 func (s *DiscoverServer) responseAppend(data []byte, from *net.UDPAddr) {
+	if s.ReadOnly {
+		return
+	}
+
 	var msg appendData
 	err := xml.Unmarshal(data, &msg)
 	chk(err)
@@ -115,6 +120,10 @@ func (s *DiscoverServer) responseAppend(data []byte, from *net.UDPAddr) {
 }
 
 func (s *DiscoverServer) responseRemove(data []byte, from *net.UDPAddr) {
+	if s.ReadOnly {
+		return
+	}
+
 	var msg removeData
 	err := xml.Unmarshal(data, &msg)
 	chk(err)
@@ -174,17 +183,18 @@ func (s *DiscoverServer) Remove(scheme, ip, port, uri string) {
 	s.Lock.Unlock()
 }
 
-func (s *DiscoverServer) Serve() {
+func (s *DiscoverServer) Serve(readonly bool) {
 	defer func() {
 		recover()
 	}()
+	s.ReadOnly = readonly
+
 	addr, err := net.ResolveUDPAddr("udp4", "239.9.0.99:9000")
 	chk(err)
 	conn, err := net.ListenMulticastUDP("udp4", nil, addr)
 	chk(err)
 
 	s.Conn = conn
-	s.Services = []ServeNode{}
 
 	buf := make([]byte, 1024)
 	var n int

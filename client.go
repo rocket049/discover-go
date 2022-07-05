@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -44,7 +45,7 @@ func (s *DiscoverClient) Query() (res []ServeNode) {
 	var buf [1024]byte
 	for {
 		s.Conn.SetReadDeadline(time.Now().Add(time.Millisecond * 500))
-		n, _, err := s.Conn.ReadFromUDP(buf[:])
+		n, a1, err := s.Conn.ReadFromUDP(buf[:])
 		if err != nil {
 			break
 		}
@@ -52,6 +53,9 @@ func (s *DiscoverClient) Query() (res []ServeNode) {
 			//log.Println(string(buf[:n]))
 			var msg serveData
 			xml.Unmarshal(buf[:n], &msg)
+			if strings.Contains(msg.Href, "@?@") {
+				msg.Href = strings.Replace(msg.Href, "@?@", a1.IP.String(), 1)
+			}
 			res = append(res, ServeNode{Href: msg.Href, Title: msg.Title, Name: msg.Name})
 		}
 	}

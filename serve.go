@@ -145,6 +145,7 @@ func (s *DiscoverServer) responseRemove(data []byte, from *net.UDPAddr) {
 	s.Conn.WriteToUDP([]byte("<response name=\"ok\" />\n\r"), from)
 }
 
+//服务器添加本机的服务时，可以设置ip="@?@"，客户端会从UDP数据自行获取IP地址。
 func (s *DiscoverServer) Append(scheme, ip string, port int, uri, name, title string) {
 	url := createUrl(scheme, strconv.Itoa(port), uri, ip)
 

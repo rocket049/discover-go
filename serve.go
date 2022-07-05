@@ -64,7 +64,7 @@ func (s *DiscoverServer) ParseMsg(msg []byte, from *net.UDPAddr) {
 	}()
 
 	n := bytes.Index(msg, []byte{' '})
-	//log.Println(string(msg[1:n]))
+	log.Println(string(msg[1:n]))
 
 	switch string(msg[1:n]) {
 	case "query":
@@ -80,6 +80,7 @@ func (s *DiscoverServer) ParseMsg(msg []byte, from *net.UDPAddr) {
 func (s *DiscoverServer) responseQuery(data []byte, from *net.UDPAddr) {
 	s.Lock.RLock()
 	defer s.Lock.RUnlock()
+	log.Println(len(s.Services))
 	for _, serve := range s.Services {
 		dgam := fmt.Sprintf("<serve href=\"%s\" title=\"%s\"  name=\"%s\" />\n\r", serve.Href, xmlEscape(serve.Title), xmlEscape(serve.Name))
 		//log.Println("resp:", dgam)
@@ -145,10 +146,10 @@ func (s *DiscoverServer) responseRemove(data []byte, from *net.UDPAddr) {
 	s.Conn.WriteToUDP([]byte("<response name=\"ok\" />\n\r"), from)
 }
 
-//服务器添加本机的服务时，可以设置ip="@?@"，客户端会从UDP数据自行获取IP地址。
+//如果参数： ip="@?@"，表示服务器IP地址
 func (s *DiscoverServer) Append(scheme, ip string, port int, uri, name, title string) {
 	url := createUrl(scheme, strconv.Itoa(port), uri, ip)
-
+	log.Println(url)
 	var isExist bool = false
 
 	for i := range s.Services {

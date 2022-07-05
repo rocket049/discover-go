@@ -13,8 +13,7 @@ func main() {
 		discover.Serve()
 	} else {
 		server := discover.NewServer()
-		//'@?@'表示由客户端从接收到的UDP数据中读取IP地址
-		server.Append("http", "@?@", 0, "qq", "serveqq", "title of this")
+		server.Append("http", "@?@", 6060, "qq", "serveqq", "title of this")
 		server.Serve(true)
 	}
 	//discover.Serve()

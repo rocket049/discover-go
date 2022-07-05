@@ -45,7 +45,11 @@ func (s *DiscoverClient) Query() (res []ServeNode) {
 	var buf [1024]byte
 	for {
 		s.Conn.SetReadDeadline(time.Now().Add(time.Millisecond * 500))
+<<<<<<< HEAD
 		n, a, err := s.Conn.ReadFromUDP(buf[:])
+=======
+		n, a1, err := s.Conn.ReadFromUDP(buf[:])
+>>>>>>> 7f81f6fd051fb6a717d2d7638e4640ac3544175b
 		if err != nil {
 			break
 		}
@@ -53,11 +57,16 @@ func (s *DiscoverClient) Query() (res []ServeNode) {
 			//log.Println(string(buf[:n]))
 			var msg serveData
 			xml.Unmarshal(buf[:n], &msg)
+<<<<<<< HEAD
 			//IP如果是'@?@'，表示使用返回的IP填充
 			if strings.Index(msg.Href, "@?@") >= 0 {
 				ip := a.IP.String()
 				href := strings.Replace(msg.Href, "@?@", ip, 1)
 				msg.Href = href
+=======
+			if strings.Contains(msg.Href, "@?@") {
+				msg.Href = strings.Replace(msg.Href, "@?@", a1.IP.String(), 1)
+>>>>>>> 7f81f6fd051fb6a717d2d7638e4640ac3544175b
 			}
 			res = append(res, ServeNode{Href: msg.Href, Title: msg.Title, Name: msg.Name})
 		}

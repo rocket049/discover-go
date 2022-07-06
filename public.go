@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"strconv"
 )
 
 func chk(err error) {
@@ -17,10 +18,16 @@ type ServeNode struct {
 }
 
 func createUrl(scheme, port, uri, ip string) (res string) {
-	if len(port) < 2 {
-		res = fmt.Sprintf("%s://%s/%s", scheme, ip, uri)
-	} else {
-		res = fmt.Sprintf("%s://%s:%s/%s", scheme, ip, port, uri)
+	res = ip
+	if len(scheme) > 0 {
+		res = fmt.Sprintf("%s://%s", scheme, res)
+	}
+	p, err := strconv.ParseInt(port, 10, 16)
+	if err == nil && p > 0 {
+		res = fmt.Sprintf("%s:%v", res, p)
+	}
+	if len(uri) > 0 {
+		res = fmt.Sprintf("%s/%s", res, uri)
 	}
 	return
 }
